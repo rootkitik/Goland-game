@@ -1,136 +1,150 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
+
+	"github.com/fatih/color"
+)
+
+var (
+	clrError   = color.RGB(255, 80, 80)
+	clrSuccess = color.RGB(80, 255, 80)
+	clrWarn    = color.RGB(255, 255, 80)
+	clrInfo    = color.RGB(180, 180, 255)
 )
 
 func main() {
-	art()
+	showGradientArt()
+	mainMenu()
 }
 
-func art() {
-	var art = `
- ███  █████ █████ █   █ █████ ████  
-█   █ █       █   █   █ █     █   █ 
-█████ ████    █   █████ ████  ████  
-█   █ █       █   █   █ █     █  █  
-█   █ █████   █   █   █ █████ █   █ 
-	`
-	fmt.Print(art)
-	time.Sleep(time.Second * 1)
-	hello()
+func showGradientArt() {
+	artLines := []string{
+		"  /$$$$$$  /$$$$$$$$ /$$$$$$$$ /$$   /$$ /$$$$$$$$ /$$$$$$$ ",
+		" /$$__  $$| $$_____/|__  $$__/| $$  | $$| $$_____/| $$__  $$",
+		"| $$  \\ $$| $$         | $$   | $$  | $$| $$      | $$  \\ $$",
+		"| $$$$$$$$| $$$$$      | $$   | $$$$$$$$| $$$$$   | $$$$$$$/",
+		"| $$__  $$| $$__/      | $$   | $$__  $$| $$__/   | $$__  $$",
+		"| $$  | $$| $$         | $$   | $$  | $$| $$      | $$  \\ $$",
+		"| $$  | $$| $$$$$$$$   | $$   | $$  | $$| $$$$$$$$| $$  | $$",
+		"|__/  |__/|________/   |__/   |__/  |__/|________/|__/  |__/",
+	}
+	for i, line := range artLines {
+		t := float64(i) / float64(len(artLines)-1)
+		r := uint8(128 + 127*t)
+		g := uint8(220 * t)
+		b := uint8(255 - 15*t)
+		color.RGB(int(r), int(g), int(b)).Println(line)
+	}
+	time.Sleep(1 * time.Second)
 }
 
-func hello() {
-	fmt.Println("Привет! Это релиз (v1.0.0) чат-игры 'угадай число'")
-	time.Sleep(time.Second * 2)
-	fmt.Println("Если хотите начать игру - нажмите Y, если хотите закрыть окно - нажмите N.")
-	time.Sleep(time.Second * 1)
-	fmt.Println("Есть третий варинат - нажмине E чтобы посмотреть лог обновления (что было сюда добавлено)")
-
+func mainMenu() {
 	for {
-		var helloread string
-		fmt.Scan(&helloread)
-		if helloread == "Y" {
-			game()
-			break
-		} else if helloread == "N" {
-			fmt.Println("Окно будет закрыто через 3 секунды")
-			time.Sleep(time.Second * 3)
+		clrSuccess.Println("\n[СИСТЕМА] Добро пожаловать в игру 'Угадай число'")
+		clrInfo.Println("Выберите действие:")
+		clrWarn.Println("[1] Начать игру")
+		clrWarn.Println("[2] Лог обновлений")
+		clrWarn.Println("[3] Выход")
+
+		choice := readChoice("1", "2", "3")
+		switch choice {
+		case "1":
+			playGame()
+		case "2":
+			showLog()
+		case "3":
+			clrWarn.Println("Выход через 3 секунды...")
+			time.Sleep(3 * time.Second)
 			os.Exit(0)
-		} else if helloread == "E" {
-			log()
-			break
 		}
 	}
 }
 
-func game() {
-	fmt.Println("Добро пожаловать в игру 'угадай число'")
-	time.Sleep(time.Second * 2)
-	fmt.Println("Правила игры крайне просты - нужно угадать число от 1 до 100")
-	fmt.Println("Чтобы начать игру нажмите Enter. Чтобы выйти из игры - нажмите Ctrl + C")
-	var ready string
-	fmt.Scan(&ready)
-	time.Sleep(time.Second * 1)
-	fmt.Println("Загадываю число, не мешай...")
+func readChoice(allowed ...string) string {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("> ")
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		for _, a := range allowed {
+			if input == a {
+				return input
+			}
+		}
+		clrError.Println("Ошибка: нужно ввести " + strings.Join(allowed, " или "))
+	}
+}
 
+func playGame() {
+	clrSuccess.Println("\n[СИСТЕМА] Добро пожаловать в игру 'Угадай число'")
+	time.Sleep(1 * time.Second)
+	clrInfo.Println("Правила: нужно угадать число от 1 до 100")
+	clrInfo.Println("Нажмите Enter, чтобы начать (Ctrl+C для выхода)")
+	fmt.Scanln()
+
+	clrInfo.Println("Загадываю число...")
 	secret := rand.Intn(100) + 1
-	atten := 0
-	fmt.Println("Я загадал число... А не скажу. Отгадывай")
+	attempts := 0
+
+	clrSuccess.Println("Число загадано. Начинайте отгадывать!")
 
 	for {
-		var guess int
-		fmt.Scan(&guess)
-		atten++
+		fmt.Print("Ваше число: ")
+		guess, ok := readInt()
+		if !ok {
+			clrError.Println("Ошибка: нужно ввести целое число!")
+			continue
+		}
+		attempts++
 
-		fmt.Println("Ты ввел(а) число:", guess)
-
-		if guess > secret {
-			fmt.Println("Загаданное число меньше")
-		} else if guess < secret {
-			fmt.Println("Загаданное число больше")
-		} else if guess == secret {
-			fmt.Println("Правильно! Ты угадал число за", atten, "попыток")
-			time.Sleep(time.Second * 2)
-			fmt.Println("Переношу вас в режим выбора дальнейшего действия...")
-			time.Sleep(time.Second * 2)
-			orno()
+		if guess < secret {
+			clrWarn.Println("Загаданное число БОЛЬШЕ")
+		} else if guess > secret {
+			clrWarn.Println("Загаданное число МЕНЬШЕ")
+		} else {
+			clrSuccess.Printf("Правильно! Ты угадал за %d попыток!\n", attempts)
+			time.Sleep(2 * time.Second)
+			clrInfo.Println("Возврат в главное меню...")
+			time.Sleep(1 * time.Second)
+			return
 		}
 	}
 }
 
-func log() {
-	fmt.Println("Версия программы: v1.0.0")
-	fmt.Println("Версия языка программирования: Go 1.18.3")
-	fmt.Println("Версия компилятора: gcc 9.3.0")
-	fmt.Println("Хотите посмотреть полный список функционала? (Y/N)")
-	var logready string
-	fmt.Scan(&logready)
-	for {
-		if logready == "Y" {
-			fmt.Println("Проверяю базу данных...")
-			time.Sleep(time.Second * 1)
-			fmt.Println("Список функционала:")
-			time.Sleep(time.Second * 2)
-			fmt.Println("1. Добавление простого арта")
-			fmt.Println("2. Добавление генератора случайных чисел (1-100)")
-			fmt.Println("3. оптимизация кода (распределения функционала по циклам для дальнейшей ротации в новых проектах)")
-			time.Sleep(time.Second * 3)
-			fmt.Println("Переношу на выбор дальнейшего действия...")
-			time.Sleep(time.Second * 2)
-			orno()
-			break
-		}
-		if logready == "N" {
-			orno()
-			break
-		}
+func readInt() (int, bool) {
+	var val int
+	_, err := fmt.Scan(&val)
+	if err != nil {
+		var discard string
+		fmt.Scanln(&discard)
+		return 0, false
 	}
+	return val, true
 }
 
-func orno() {
-	fmt.Println("Куда хотите перейти? (введите цифру в завиимости от выбора)")
-	fmt.Println("1. В начальное меню (приветственное сообщение с артом)")
-	fmt.Println("2. В игру")
-	fmt.Println("3. Выйти из прогруммы")
+func showLog() {
+	clrSuccess.Println("\n[СИСТЕМА] Информация о версии")
+	clrInfo.Println("Версия программы: v1.2.0")
+	clrInfo.Println("Версия Go: 1.18.3")
+	clrInfo.Println("Компилятор: gcc 9.3.0")
+	clrWarn.Print("Показать полный список функционала? (Y/N): ")
 
-	var orno string
-	fmt.Scan(&orno)
-	for {
-		if orno == "1" {
-			hello()
-			break
-		} else if orno == "2" {
-			game()
-			break
-		} else if orno == "3" {
-			fmt.Println("Окно будет закрыто через 3 секунды")
-			time.Sleep(time.Second * 3)
-			os.Exit(0)
-		}
+	answer := readChoice("Y", "N", "y", "n")
+	if answer == "Y" || answer == "y" {
+		clrSuccess.Println("\nСписок функционала:")
+		clrInfo.Println("1. Градиентный ASCII-арт")
+		clrInfo.Println("2. Генератор случайных чисел (1-100)")
+		clrInfo.Println("3. Цветной вывод (fatih/color)")
+		clrInfo.Println("4. Защита от некорректного ввода")
+		clrInfo.Println("5. Безопасное меню без рекурсии")
+		time.Sleep(3 * time.Second)
 	}
+	clrInfo.Println("Возврат в главное меню...")
+	time.Sleep(1 * time.Second)
 }
